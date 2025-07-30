@@ -2,6 +2,12 @@ spring:
   application:
     name: ai-auto-code
 
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_auto_code
+    username: root
+    password: niit*2022
+
 server:
   port: 8123
   servlet:
