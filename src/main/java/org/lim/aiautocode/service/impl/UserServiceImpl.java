@@ -2,6 +2,8 @@ package org.lim.aiautocode.service.impl;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
@@ -11,6 +13,8 @@ import org.lim.aiautocode.model.entity.User;
 import org.lim.aiautocode.mapper.UserMapper;
 import org.lim.aiautocode.model.enums.UserRoleEnum;
 import org.lim.aiautocode.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -22,11 +26,17 @@ import java.util.regex.Pattern;
  *
  * @author lim
  */
+@RequiredArgsConstructor
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements UserService{
 
+
+    private final PasswordEncoder passwordEncoder;
+
     // 正则表达式，用于校验账号是否包含特殊字符
     private static final Pattern ACCOUNT_PATTERN = Pattern.compile("^[a-zA-Z0-9]+$");
+
+
 
     @Override
     @Transactional // 开启事务，保证注册操作的原子性
@@ -53,8 +63,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "该账号已被注册");
             }
 
-            // 3. 加密
-            String encryptedPassword = DigestUtils.md5DigestAsHex(userPassword.getBytes());
+            // 3. 【安全】使用 BCrypt 加密
+            String encryptedPassword = passwordEncoder.encode(userPassword);
 
             // 4. 保存账号
             //创建用户对象

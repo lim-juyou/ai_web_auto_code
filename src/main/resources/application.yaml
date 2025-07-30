@@ -8,6 +8,11 @@ spring:
     username: root
     password: niit*2022
 
+logging:
+  level:
+    # 这会打印出该包下所有 Mapper 接口的详细 SQL 日志
+    org.lim.aiautocode.mapper: DEBUG
+
 server:
   port: 8123
   servlet:
