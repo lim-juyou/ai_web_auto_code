@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 
 
 import static org.lim.aiautocode.constant.UserConstant.DEFAULT_PASSWORD;
-import static org.lim.aiautocode.constant.UserConstant.USER_LOGIN_STATE;
+
 
 
 
@@ -422,7 +422,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (CollUtil.isEmpty(userList)) {
             return new ArrayList<>();
         }
-        return userList.stream().map(this::getUserVO).collect(Collectors.toList());
+        return userList.stream()
+                .map(this::getUserVO)
+                .collect(Collectors.toList());
     }
     /**
      * 获取查询条件
