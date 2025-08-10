@@ -5,8 +5,10 @@ import com.mybatisflex.core.service.IService;
 import org.lim.aiautocode.model.dto.app.AppAddRequest;
 import org.lim.aiautocode.model.dto.app.AppQueryRequest;
 import org.lim.aiautocode.model.entity.App;
+import org.lim.aiautocode.model.entity.User;
 import org.lim.aiautocode.model.vo.app.AppVO;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -16,6 +18,8 @@ import java.util.List;
  * @author lim
  */
 public interface AppService extends IService<App> {
+    Flux<String> chatToGenCode(Long appId, String message, User LoginUser);
+
     /**
      * 创建应用。
      *

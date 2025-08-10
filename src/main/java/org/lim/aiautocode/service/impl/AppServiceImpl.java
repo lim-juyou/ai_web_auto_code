@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
+import org.lim.aiautocode.core.AiCodeGeneratorFacade;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.exception.ThrowUtils;
@@ -21,6 +22,7 @@ import org.lim.aiautocode.service.AppService;
 import org.lim.aiautocode.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +39,38 @@ import java.util.stream.Collectors;
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
     @Resource
     private UserService userService;
+    @Resource
+    private AiCodeGeneratorFacade aiCodeGeneratorFacade;
+
+    @Override
+    /**
+     * 用户与应用对话生成代码
+     *
+     * @param appId     应用ID
+     * @param message   用户输入的消息
+     * @param LoginUser 当前登录用户
+     * @return 生成的代码流
+     */
+    public Flux<String> chatToGenCode(Long appId, String message, User LoginUser) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appId == null || appId < 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
+        ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
+
+        // 2. 查询应用信息
+        App app = this.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+
+        // 3. 验证用户是否有权限访问应用，仅创建者可以生成代码
+        ThrowUtils.throwIf(!app.getUserId().equals(LoginUser.getId()), ErrorCode.NO_AUTH_ERROR, "无权限操作");
+
+        // 4. 获取应用的代码生成类型
+        String codeGenType = app.getCodeGenType();
+        CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
+        ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.PARAMS_ERROR, "代码生成类型错误");
+
+        // 5. 调用AI代码生成服务，生成并保存代码
+        return aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, app.getId());
+    }
 
     /**
      * 创建应用
