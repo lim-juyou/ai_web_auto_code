@@ -7,6 +7,8 @@ import org.lim.aiautocode.ai.AiCodeGeneratorService;
 import org.lim.aiautocode.ai.AiSummarizerService;
 import org.lim.aiautocode.ai.model.HtmlCodeResult;
 import org.lim.aiautocode.ai.model.MultiFileCodeResult;
+import org.lim.aiautocode.core.parse.CodeParserExecutor;
+import org.lim.aiautocode.core.saver.CodeFileSaverExecutor;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.model.enums.CodeGenTypeEnum;
@@ -47,14 +49,17 @@ public class AiCodeGeneratorFacade {
             case HTML -> {
                 // 生成HTML代码并保存
                 HtmlCodeResult htmlCodeResult = aiCodeGeneratorService.generateHtmlCode(userMessage);
-                yield CodeFileSaver.saveHtmlCodeResult(htmlCodeResult);
+                yield CodeFileSaverExecutor.executeSaver(htmlCodeResult, CodeGenTypeEnum.HTML);
             }
             case MULTI_FILE -> {
                 // 生成多文件代码并保存
                 MultiFileCodeResult multiFileCodeResult = aiCodeGeneratorService.generateMultiFileCode(userMessage);
-                yield CodeFileSaver.saveMultiFileCodeResult(multiFileCodeResult);
+                yield CodeFileSaverExecutor.executeSaver(multiFileCodeResult, CodeGenTypeEnum.MULTI_FILE);
             }
-            default -> throw new IllegalArgumentException("Invalid code generation type: " + codeGenType);
+            default -> {
+                String errorMessage = "不支持的生成类型：" + codeGenType.getValue();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMessage);
+            }
         };
     }
     /**
@@ -64,32 +69,65 @@ public class AiCodeGeneratorFacade {
      * @param codeGenTypeEnum 生成类型
      * @return 流式返回生成的代码字符串
      */
+    /**
+     * 统一入口：根据类型生成并保存代码（流式）
+     *
+     * @param userMessage     用户提示词
+     * @param codeGenTypeEnum 生成类型
+     */
     public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum codeGenTypeEnum) {
-        // 参数校验：检查生成类型是否为空
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
         }
-
-        // 根据不同的生成类型调用对应的处理方法
         return switch (codeGenTypeEnum) {
-            case HTML -> generateAndSaveHtmlCodeStream(userMessage);
-            case MULTI_FILE -> generateAndSaveMultiFileCodeStream(userMessage);
+            case HTML -> {
+                Flux<String> codeStream = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
+                yield processCodeStream(codeStream, CodeGenTypeEnum.HTML);
+            }
+            case MULTI_FILE -> {
+                Flux<String> codeStream = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
+                yield processCodeStream(codeStream, CodeGenTypeEnum.MULTI_FILE);
+            }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMessage);
             }
         };
     }
-
-
-
-
     /**
+     * 通用流式代码处理方法
+     *
+     * @param codeStream  代码流
+     * @param codeGenType 代码生成类型
+     * @return 流式响应
+     */
+    private Flux<String> processCodeStream(Flux<String> codeStream, CodeGenTypeEnum codeGenType) {
+        StringBuilder codeBuilder = new StringBuilder();
+        return codeStream.doOnNext(chunk -> {
+            // 实时收集代码片段
+            codeBuilder.append(chunk);
+        }).doOnComplete(() -> {
+            // 流式返回完成后保存代码
+            try {
+                String completeCode = codeBuilder.toString();
+                // 使用代码解析执行器解析代码
+                Object parsedResult = CodeParserExecutor.executeParser(completeCode, codeGenType);
+                // 使用代码保持执行器保存代码
+                File savedDir = CodeFileSaverExecutor.executeSaver(parsedResult, codeGenType);
+                log.info("保存成功，路径为：" + savedDir.getAbsolutePath());
+            } catch (Exception e) {
+                log.error("保存失败: {}", e.getMessage());
+            }
+        });
+    }
+
+ //   <editor-fold desc="之前废弃的流式处理方法">
+    /* *//**
      * 生成并保存HTML代码流
      *
      * @param userMessage 用户输入的消息，用于生成HTML代码的提示
      * @return 返回生成的HTML代码流，以Flux<String>形式提供实时响应
-     */
+     *//*
     private Flux<String> generateAndSaveHtmlCodeStream(String userMessage) {
         Flux<String> generateHtmlCodeStream = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
         StringBuilder codeBuilder = new StringBuilder();
@@ -116,12 +154,12 @@ public class AiCodeGeneratorFacade {
                 });
     }
 
-    /**
+    *//**
      * 生成并保存多文件代码流
      *
      * @param userMessage 用户输入的消息，用于生成代码的提示信息
      * @return 返回生成的代码流，类型为Flux<String>
-     */
+     *//*
     private Flux<String> generateAndSaveMultiFileCodeStream(String userMessage){
         // 调用AI代码生成服务生成多文件代码流
         Flux<String> generateHtmlCodeStream = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
@@ -142,7 +180,8 @@ public class AiCodeGeneratorFacade {
                     }
                 });
     }
-
+*/
+    //</editor-fold>
 
 
 }

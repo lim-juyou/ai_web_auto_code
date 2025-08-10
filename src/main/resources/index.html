@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设计模式学习指南：从理论到实战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .pattern-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .pattern-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        h2 {
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 8px;
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        code.inline-code {
+            background-color: #e5e7eb;
+            color: #1f2937;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+<!-- Header -->
+<header class="bg-blue-600 text-white text-center py-12 shadow-lg">
+    <h1 class="text-4xl md:text-5xl font-bold">设计模式学习指南</h1>
+    <p class="mt-4 text-lg">结合 AI 代码生成项目，深入理解核心设计模式</p>
+</header>
+
+<!-- Main Content -->
+<main class="container mx-auto p-4 md:p-8">
+
+    <!-- Introduction -->
+    <section id="intro" class="mb-12 bg-white p-6 rounded-lg shadow">
+        <h2 class="text-3xl font-bold text-gray-900">开篇：为何要学习设计模式？</h2>
+        <p class="mt-4 text-lg leading-relaxed">
+            设计模式是软件开发人员在特定上下文中解决常见问题的“最佳实践”和“可复用解决方案”。它们不是现成的代码，而是指导你如何组织代码以实现最佳结构、可维护性和灵活性的蓝图。
+        </p>
+        <p class="mt-4 text-lg leading-relaxed">
+            在你提供的 <code class="inline-code">aiautocode</code> 项目中，就巧妙地运用了多种设计模式来构建一个清晰、可扩展的系统。本指南将带你逐一解析这些模式，并展示它们是如何协同工作的。
+        </p>
+    </section>
+
+    <!-- Patterns Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <a href="#facade" class="pattern-card bg-white p-6 rounded-lg shadow-md text-center block">
+            <h3 class="text-xl font-bold text-blue-600">门面模式 (Facade)</h3>
+            <p class="mt-2 text-gray-600">简化复杂，提供统一入口。</p>
+        </a>
+        <a href="#executor" class="pattern-card bg-white p-6 rounded-lg shadow-md text-center block">
+            <h3 class="text-xl font-bold text-green-600">执行器模式 (Executor)</h3>
+            <p class="mt-2 text-gray-600">解耦调用与执行。</p>
+        </a>
+        <a href="#strategy" class="pattern-card bg-white p-6 rounded-lg shadow-md text-center block">
+            <h3 class="text-xl font-bold text-purple-600">策略模式 (Strategy)</h3>
+            <p class="mt-2 text-gray-600">封装算法，自由切换。</p>
+        </a>
+        <a href="#template" class="pattern-card bg-white p-6 rounded-lg shadow-md text-center block">
+            <h3 class="text-xl font-bold text-yellow-600">模板方法模式 (Template)</h3>
+            <p class="mt-2 text-gray-600">定义骨架，定制细节。</p>
+        </a>
+    </div>
+
+    <!-- Facade Pattern -->
+    <section id="facade" class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-3xl font-bold text-blue-700">1. 门面模式 (Facade Pattern)</h2>
+        <p class="text-lg"><strong>核心思想：</strong>为系统中的一组复杂接口提供一个统一、简化的入口。它隐藏了系统的复杂性，并向客户端提供了一个可以访问系统的接口。</p>
+
+        <h3 class="text-2xl">代码中的体现：<code class="inline-code">AiCodeGeneratorFacade.java</code></h3>
+        <p>在你的项目中，<code class="inline-code">AiCodeGeneratorFacade</code> 就是一个典型的门面。客户端（比如一个Controller或Service）只需要与这个类交互，而不需要关心背后复杂的代码生成、解析和保存过程。</p>
+        <pre><code class="language-java">
+// 客户端只需要调用这一个方法，传入用户需求和生成类型
+public File generateAndSaveCode(String userMessage, CodeGenTypeEnum codeGenType) {
+    // ... 内部逻辑 ...
+    return switch (codeGenType) {
+        case HTML -> {
+            // 调用AI生成服务
+            HtmlCodeResult htmlCodeResult = aiCodeGeneratorService.generateHtmlCode(userMessage);
+            // 调用执行器保存
+            yield CodeFileSaverExecutor.executeSaver(htmlCodeResult, CodeGenTypeEnum.HTML);
+        }
+        // ... 其他 case ...
+    };
+}
+            </code></pre>
+        <p>客户端无需知道 <code class="inline-code">AiCodeGeneratorService</code>、<code class="inline-code">CodeParserExecutor</code> 或 <code class="inline-code">CodeFileSaverExecutor</code> 的存在。所有复杂的协调工作都由 <code class="inline-code">AiCodeGeneratorFacade</code> 完成。</p>
+
+        <h3 class="text-2xl">使用场景</h3>
+        <ul class="list-disc list-inside mt-4 space-y-2">
+            <li>当你需要为一个复杂的子系统提供一个简单的接口时。</li>
+            <li>当客户端与子系统之间存在大量依赖关系时，使用门面可以解耦。</li>
+            <li>当你需要构建一个分层系统时，门面可以作为每层的入口点。</li>
+        </ul>
+    </section>
+
+    <!-- Executor Pattern -->
+    <section id="executor" class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-3xl font-bold text-green-700">2. 执行器模式 (Executor Pattern)</h2>
+        <p class="text-lg"><strong>核心思想：</strong>将任务的提交与任务的执行解耦。在你的代码中，它更像是一种调度器或分发器，根据类型选择合适的处理器来完成工作。这与命令模式有相似之处，即将一个请求封装成一个对象。</p>
+
+        <h3 class="text-2xl">代码中的体现：<code class="inline-code">CodeParserExecutor.java</code> & <code class="inline-code">CodeFileSaverExecutor.java</code></h3>
+        <p><code class="inline-code">CodeParserExecutor</code> 和 <code class="inline-code">CodeFileSaverExecutor</code> 负责根据 <code class="inline-code">CodeGenTypeEnum</code>（代码生成类型）来决定调用哪个具体的解析器或保存器。</p>
+        <pre><code class="language-java">
+// CodeParserExecutor.java
+public static Object executeParser(String codeContent, CodeGenTypeEnum codeGenType) {
+    return switch (codeGenType) {
+        case HTML -> htmlCodeParser.parseCode(codeContent); // 选择HTML解析策略
+        case MULTI_FILE -> multiFileCodeParser.parseCode(codeContent); // 选择多文件解析策略
+        default -> throw new BusinessException(...);
+    };
+}
+            </code></pre>
+        <p>这个执行器将“执行解析”这个动作与具体的解析逻辑（是解析HTML还是多文件）分离开来。调用方（<code class="inline-code">AiCodeGeneratorFacade</code>）不需要关心具体的解析实现，只需命令执行器去“执行”即可。</p>
+
+        <h3 class="text-2xl">使用场景</h3>
+        <ul class="list-disc list-inside mt-4 space-y-2">
+            <li>当一个操作有多种不同的实现方式，需要根据条件动态选择时。</li>
+            <li>希望将请求的发起者和执行者解耦，方便地增加新的执行逻辑。</li>
+            <li>用于集中管理和调度一系列相关的操作。</li>
+        </ul>
+    </section>
+
+    <!-- Strategy Pattern -->
+    <section id="strategy" class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-3xl font-bold text-purple-700">3. 策略模式 (Strategy Pattern)</h2>
+        <p class="text-lg"><strong>核心思想：</strong>定义一系列算法，将每一个算法封装起来，并使它们可以相互替换。策略模式让算法的变化独立于使用算法的客户。</p>
+
+        <h3 class="text-2xl">代码中的体现：<code class="inline-code">CodeParseStrategy.java</code> 及其实现</h3>
+        <p>这是策略模式最经典的体现。首先，定义一个策略接口：</p>
+        <pre><code class="language-java">
+// CodeParseStrategy.java - 策略接口
+public interface CodeParseStrategy<T> {
+    T parseCode(String codeContent);
+}
+            </code></pre>
+        <p>然后，为不同的解析场景提供具体的策略实现：</p>
+        <pre><code class="language-java">
+// HtmlCodeParser.java - 具体策略A
+public class HtmlCodeParser implements CodeParseStrategy<HtmlCodeResult> {
+    @Override
+    public HtmlCodeResult parseCode(String codeContent) { /* ... HTML解析逻辑 ... */ }
+}
+
+// MultiFileCodeParser.java - 具体策略B
+public class MultiFileCodeParser implements CodeParseStrategy<MultiFileCodeResult> {
+    @Override
+    public MultiFileCodeResult parseCode(String codeContent) { /* ... 多文件解析逻辑 ... */ }
+}
+            </code></pre>
+        <p>最后，由上下文（Context），也就是我们的 <code class="inline-code">CodeParserExecutor</code>，来决定在运行时使用哪个具体策略。</p>
+
+        <h3 class="text-2xl">使用场景</h3>
+        <ul class="list-disc list-inside mt-4 space-y-2">
+            <li>当你有许多相关的类，它们之间只有行为（算法）上的差异时。</li>
+            <li>需要一个算法的多种变体，并且希望在运行时动态选择。</li>
+            <li>为了避免使用大量的条件语句（if-else 或 switch-case）来选择算法。</li>
+        </ul>
+    </section>
+
+    <!-- Template Method Pattern -->
+    <section id="template" class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-3xl font-bold text-yellow-700">4. 模板方法模式 (Template Method Pattern)</h2>
+        <p class="text-lg"><strong>核心思想：</strong>在一个方法中定义一个算法的骨架，而将一些步骤延迟到子类中实现。模板方法使得子类可以不改变一个算法的结构即可重定义该算法的某些特定步骤。</p>
+
+        <h3 class="text-2xl">代码中的体现：<code class="inline-code">CodeFileSaverTemplate.java</code> 及其子类</h3>
+        <p>这个抽象类定义了保存代码的完整流程（模板方法 <code class="inline-code">saveCode</code>），但将一些具体的、可变的步骤交给了子类实现。</p>
+        <pre><code class="language-java">
+// CodeFileSaverTemplate.java - 抽象模板
+public abstract class CodeFileSaverTemplate<T> {
+
+    // 这是模板方法，定义了算法的骨架，final确保子类不能修改流程
+    public final File saveCode(T result) {
+        // 1. 固定的步骤：验证输入
+        validateInput(result);
+        // 2. 固定的步骤：创建唯一目录
+        String baseDirPath = buildUniqueDir();
+        // 3. 变化的步骤：保存具体文件（由子类实现）
+        saveFiles(result, baseDirPath);
+        // 4. 固定的步骤：返回目录
+        return new File(baseDirPath);
+    }
+
+    // 抽象方法，由子类实现具体细节
+    protected abstract void saveFiles(T result, String baseDirPath);
+
+    // 钩子方法或具体方法，子类可以覆盖
+    protected void validateInput(T result) { /* ... 默认验证 ... */ }
+
+    // ... 其他方法 ...
+}
+            </code></pre>
+        <p>具体的子类，如 <code class="inline-code">HtmlCodeFileSaver</code> 和 <code class="inline-code">MultiFileCodeFileSaver</code>，只需要关注它们自己特有的 <code class="inline-code">saveFiles</code> 和 <code class="inline-code">validateInput</code> 逻辑，而无需重复编写创建目录等通用代码。</p>
+
+        <h3 class="text-2xl">使用场景</h3>
+        <ul class="list-disc list-inside mt-4 space-y-2">
+            <li>当多个类有共同的算法，但具体步骤有细微差别时。</li>
+            <li>为了防止子类修改算法的核心结构，同时又允许它们进行定制。</li>
+            <li>用于代码复用，将公共行为提取到父类中。</li>
+        </ul>
+    </section>
+
+    <!-- Combined Usage -->
+    <section id="combined" class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-3xl font-bold text-red-700">模式的协同工作：一窥全貌</h2>
+        <p class="text-lg">这些设计模式在你的项目中不是孤立存在的，而是相互协作，共同构建了一个强大而灵活的系统。它们的协作流程如下：</p>
+
+        <div class="mt-6 border-l-4 border-blue-500 pl-4">
+            <p class="font-bold text-xl mb-2">请求处理流程：</p>
+            <ol class="list-decimal list-inside space-y-4">
+                <li>
+                    <strong>门面 (Facade) 接收请求</strong><br>
+                    客户端调用 <code class="inline-code">AiCodeGeneratorFacade.generateAndSaveCodeStream()</code>，这是唯一的入口。
+                </li>
+                <li>
+                    <strong>门面 (Facade) 委托执行器 (Executor)</strong><br>
+                    在流式处理的 <code class="inline-code">doOnComplete</code> 回调中，门面调用 <code class="inline-code">CodeParserExecutor.executeParser()</code> 来解析完整的代码字符串。
+                </li>
+                <li>
+                    <strong>执行器 (Executor) 使用策略 (Strategy)</strong><br>
+                    <code class="inline-code">CodeParserExecutor</code> 内部根据 <code class="inline-code">codeGenType</code>，从 <code class="inline-code">HtmlCodeParser</code> 和 <code class="inline-code">MultiFileCodeParser</code> 这两个策略中选择一个来执行解析任务。
+                </li>
+                <li>
+                    <strong>门面 (Facade) 再次委托执行器 (Executor)</strong><br>
+                    门面拿到解析结果后，接着调用 <code class="inline-code">CodeFileSaverExecutor.executeSaver()</code> 来保存文件。
+                </li>
+                <li>
+                    <strong>执行器 (Executor) 使用模板方法 (Template Method)</strong><br>
+                    <code class="inline-code">CodeFileSaverExecutor</code> 根据类型，选择 <code class="inline-code">HtmlCodeFileSaver</code> 或 <code class="inline-code">MultiFileCodeFileSaver</code>。这两个类都是 <code class="inline-code">CodeFileSaverTemplate</code> 的子类，它们会执行定义好的模板方法 <code class="inline-code">saveCode()</code> 来完成保存。
+                </li>
+            </ol>
+        </div>
+
+        <h3 class="text-2xl mt-8">联合使用的优势</h3>
+        <ul class="list-disc list-inside mt-4 space-y-2">
+            <li><strong>高内聚，低耦合：</strong>每个模式都解决了特定的问题，使得类的职责单一、清晰。它们之间的依赖关系明确，易于维护。</li>
+            <li><strong>高灵活性和可扩展性：</strong>
+                <ul>
+                    <li>想增加一种新的代码类型（比如Vue单文件组件）？只需：
+                        <ol class="list-decimal list-inside ml-4">
+                            <li>添加一个新的 <code class="inline-code">CodeParseStrategy</code> 实现。</li>
+                            <li>添加一个新的 <code class="inline-code">CodeFileSaverTemplate</code> 子类。</li>
+                            <li>在两个执行器（Executor）的 <code class="inline-code">switch</code> 语句中增加一个case即可。</li>
+                        </ol>
+                    </li>
+                    <li>完全不需要修改门面类或现有的策略和模板类。这就是“对扩展开放，对修改关闭”的开闭原则的完美体现。</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<!-- Footer -->
+<footer class="text-center py-6 bg-gray-800 text-white mt-12">
+    <p>希望这份指南能帮助你更好地理解和运用设计模式。继续探索，不断进步！</p>
+</footer>
+
+</body>
+</html>

@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
  *
  * @author yupi
  */
+@Deprecated
 public class CodeParser {
 
     private static final Pattern HTML_CODE_PATTERN = Pattern.compile("```html\\s*\\n([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
@@ -64,7 +65,7 @@ public class CodeParser {
             result.setJsCode(jsCode.trim());
         }
 
-        //新增：解析并设置描述信息
+        //解析并设置描述信息
         String description = extractDescription(codeContent);
         result.setDescription(description);
 

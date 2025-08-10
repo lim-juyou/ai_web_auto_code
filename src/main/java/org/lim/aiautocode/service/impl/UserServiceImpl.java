@@ -1,7 +1,6 @@
 package org.lim.aiautocode.service.impl;
 
 
-
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -61,16 +60,10 @@ import java.util.stream.Collectors;
 import static org.lim.aiautocode.constant.UserConstant.DEFAULT_PASSWORD;
 
 
-
-
 /**
-
  * 用户表 服务层实现。
-
  *
-
  * @author lim
-
  */
 
 @RequiredArgsConstructor
@@ -83,7 +76,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final PasswordEncoder passwordEncoder;
 
 
-// 正则表达式，用于校验账号是否包含特殊字符
+    // 正则表达式，用于校验账号是否包含特殊字符
 
     private static final Pattern ACCOUNT_PATTERN = Pattern.compile("^[a-zA-Z0-9]+$");
 
@@ -241,9 +234,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // principal: 主要信息，通常是 User 对象或用户名
         // credentials: 凭证，通常是密码（因为已认证，可以设为 null）
         // authorities: 权限列表
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                user, null, Collections.emptyList()
-        );
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
 
         // b. 创建一个新的 SecurityContext 并设置认证信息
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
@@ -303,7 +294,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
 
-
     /**
      * 获取当前登录用户
      *
@@ -313,7 +303,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
     // UserServiceImpl.java
-
     @Override
     public User getLoginUser(HttpServletRequest request) {
         // 从 Spring Security 的上下文中获取认证信息
@@ -335,7 +324,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 你可以根据ID再次查询数据库确保信息最新，这是个好习惯
         return this.getById(currentUser.getId());
     }
-
+//<editor-fold defaultstate="collapsed" desc="废弃的用户登出">
 //改用Spring Security框架标准登出
    /* @Override
     public boolean userLogout(HttpServletRequest request) {
@@ -357,6 +346,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return true;
 
     }*/
+//    </editor-fold>
+
     /**
      * 添加用户
      *
@@ -367,14 +358,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         ThrowUtils.throwIf(userAddRequest == null, ErrorCode.PARAMS_ERROR);
         // 默认密码 12345678
         String encryptPassword = passwordEncoder.encode(DEFAULT_PASSWORD);
-        User user = User.builder()
-                .userName(userAddRequest.getUserName())
-                .userAccount(userAddRequest.getUserAccount())
-                .userAvatar(userAddRequest.getUserAvatar())
-                .userPassword(encryptPassword)
-                .userProfile(userAddRequest.getUserProfile())
-                .userRole(userAddRequest.getUserRole())
-                .build();
+        User user = User.builder().userName(userAddRequest.getUserName()).userAccount(userAddRequest.getUserAccount()).userAvatar(userAddRequest.getUserAvatar()).userPassword(encryptPassword).userProfile(userAddRequest.getUserProfile()).userRole(userAddRequest.getUserRole()).build();
         boolean result = this.save(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return user.getId();
@@ -410,6 +394,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         BeanUtil.copyProperties(user, userVO);
         return userVO;
     }
+
     /**
      * 获取脱敏的用户列表
      *
@@ -422,10 +407,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (CollUtil.isEmpty(userList)) {
             return new ArrayList<>();
         }
-        return userList.stream()
-                .map(this::getUserVO)
-                .collect(Collectors.toList());
+        return userList.stream().map(this::getUserVO).collect(Collectors.toList());
     }
+
     /**
      * 获取查询条件
      *
@@ -444,15 +428,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String userRole = userQueryRequest.getUserRole();
         String sortField = userQueryRequest.getSortField();
         String sortOrder = userQueryRequest.getSortOrder();
-        return QueryWrapper.create()
-                .eq("id", id)
-                .eq("userRole", userRole)
-                .like("userAccount", userAccount)
-                .like("userName", userName)
-                .like("userProfile", userProfile)
-                .orderBy(sortField, "ascend".equals(sortOrder));
+        return QueryWrapper.create().eq("id", id).eq("userRole", userRole).like("userAccount", userAccount).like("userName", userName).like("userProfile", userProfile).orderBy(sortField, "ascend".equals(sortOrder));
     }
-
 
 
     /**
