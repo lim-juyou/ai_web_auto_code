@@ -13,18 +13,17 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.commons.lang3.StringUtils;
 
-import org.lim.aiautocode.common.ResultUtils;
 import org.lim.aiautocode.exception.BusinessException;
 
 import org.lim.aiautocode.exception.ErrorCode;
 
 import org.lim.aiautocode.exception.ThrowUtils;
 
-import org.lim.aiautocode.model.dto.UserAddRequest;
-import org.lim.aiautocode.model.dto.UserLoginRequest;
+import org.lim.aiautocode.model.dto.user.UserAddRequest;
+import org.lim.aiautocode.model.dto.user.UserLoginRequest;
 
-import org.lim.aiautocode.model.dto.UserQueryRequest;
-import org.lim.aiautocode.model.dto.UserRegisterRequest;
+import org.lim.aiautocode.model.dto.user.UserQueryRequest;
+import org.lim.aiautocode.model.dto.user.UserRegisterRequest;
 
 import org.lim.aiautocode.model.entity.User;
 
@@ -32,16 +31,15 @@ import org.lim.aiautocode.mapper.UserMapper;
 
 import org.lim.aiautocode.model.enums.UserRoleEnum;
 
-import org.lim.aiautocode.model.vo.LoginUserVO;
+import org.lim.aiautocode.model.vo.user.LoginUserVO;
 
-import org.lim.aiautocode.model.vo.UserVO;
+import org.lim.aiautocode.model.vo.user.UserVO;
 import org.lim.aiautocode.service.UserService;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -303,8 +301,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
     // UserServiceImpl.java
+    @Deprecated
     @Override
     public User getLoginUser(HttpServletRequest request) {
+        // 从 Spring Security 的上下文中获取认证信息
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+
+        // 从认证信息中获取 principal（我们在登录时存入的 User 对象）
+        Object principal = authentication.getPrincipal();
+        User currentUser;
+        if (principal instanceof User) {
+            currentUser = (User) principal;
+        } else {
+            // 如果 principal 不是预期的类型，说明存在问题
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+
+        // 你可以根据ID再次查询数据库确保信息最新，这是个好习惯
+        return this.getById(currentUser.getId());
+    }
+
+    @Override
+    public User getLoginUser() {
         // 从 Spring Security 的上下文中获取认证信息
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

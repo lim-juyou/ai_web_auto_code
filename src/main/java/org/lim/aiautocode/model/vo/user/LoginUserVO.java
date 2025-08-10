@@ -1,4 +1,4 @@
-package org.lim.aiautocode.model.vo;
+package org.lim.aiautocode.model.vo.user;
 
 import lombok.Builder;
 import lombok.Data;

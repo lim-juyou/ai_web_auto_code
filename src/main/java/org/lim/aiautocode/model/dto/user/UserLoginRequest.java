@@ -1,4 +1,4 @@
-package org.lim.aiautocode.model.dto;
+package org.lim.aiautocode.model.dto.user;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 @Data
-public class UserRegisterRequest implements Serializable {
+public class UserLoginRequest implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 3191241716373120793L;
@@ -20,9 +20,4 @@ public class UserRegisterRequest implements Serializable {
      * 密码
      */
     private String userPassword;
-
-    /**
-     * 确认密码
-     */
-    private String checkPassword;
 }

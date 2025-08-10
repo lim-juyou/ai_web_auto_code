@@ -19,7 +19,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Aspect
 @Component
@@ -43,8 +42,10 @@ public class AuthInterceptor {
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
 
         // 2. 获取当前登录用户，并进行健壮性检查
-        User loginUser = userService.getLoginUser(request);
+//        User loginUser = userService.getLoginUser(request);
+        User loginUser = userService.getLoginUser();
         if (loginUser == null) {
+
             // 抛出明确的“未登录”异常，而不是让程序崩溃
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }

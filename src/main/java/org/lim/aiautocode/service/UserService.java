@@ -3,13 +3,13 @@ package org.lim.aiautocode.service;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.lim.aiautocode.model.dto.UserAddRequest;
-import org.lim.aiautocode.model.dto.UserLoginRequest;
-import org.lim.aiautocode.model.dto.UserQueryRequest;
-import org.lim.aiautocode.model.dto.UserRegisterRequest;
+import org.lim.aiautocode.model.dto.user.UserAddRequest;
+import org.lim.aiautocode.model.dto.user.UserLoginRequest;
+import org.lim.aiautocode.model.dto.user.UserQueryRequest;
+import org.lim.aiautocode.model.dto.user.UserRegisterRequest;
 import org.lim.aiautocode.model.entity.User;
-import org.lim.aiautocode.model.vo.LoginUserVO;
-import org.lim.aiautocode.model.vo.UserVO;
+import org.lim.aiautocode.model.vo.user.LoginUserVO;
+import org.lim.aiautocode.model.vo.user.UserVO;
 
 import java.util.List;
 
@@ -49,7 +49,10 @@ public interface UserService extends IService<User> {
      * @param request 请求
      * @return 登录用户
      */
+    @Deprecated
     User getLoginUser(HttpServletRequest request);
+
+    User getLoginUser();
 
     /**
      * 用户注销
