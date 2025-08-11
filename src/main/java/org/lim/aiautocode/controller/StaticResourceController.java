@@ -55,6 +55,10 @@ public class StaticResourceController {
             Resource resource = new FileSystemResource(file);
             return ResponseEntity.ok()
                     .header("Content-Type", getContentTypeWithCharset(filePath))
+                    // 允许同源 iframe 嵌入
+                    .header("X-Frame-Options", "SAMEORIGIN")
+                    // 显式允许同源作为父页面
+                    .header("Content-Security-Policy", "frame-ancestors 'self'")
                     .body(resource);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
