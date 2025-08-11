@@ -15,10 +15,7 @@ import org.lim.aiautocode.constant.UserConstant;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.exception.ThrowUtils;
-import org.lim.aiautocode.model.dto.app.AppAddRequest;
-import org.lim.aiautocode.model.dto.app.AppAdminUpdateRequest;
-import org.lim.aiautocode.model.dto.app.AppQueryRequest;
-import org.lim.aiautocode.model.dto.app.AppUpdateRequest;
+import org.lim.aiautocode.model.dto.app.*;
 import org.lim.aiautocode.model.entity.App;
 import org.lim.aiautocode.model.entity.User;
 import org.lim.aiautocode.model.vo.app.AppVO;
@@ -83,6 +80,7 @@ public class AppController {
     }
 
 
+
     /**
      * 创建应用
      *
@@ -94,6 +92,23 @@ public class AppController {
         User loginUser = userService.getLoginUser();
         Long appId = appService.createApp(appAddRequest, loginUser.getId());
         return ResultUtils.success(appId);
+    }
+    /**
+     * 应用部署
+     *
+     * @param appDeployRequest 部署请求
+     * @return 部署 URL
+     */
+    @PostMapping("/deploy")
+    public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest) {
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        Long appId = appDeployRequest.getAppId();
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser();
+        // 调用服务部署应用
+        String deployUrl = appService.deployApp(appId, loginUser);
+        return ResultUtils.success(deployUrl);
     }
 
     /**

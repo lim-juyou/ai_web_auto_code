@@ -2,6 +2,7 @@ package org.lim.aiautocode.core.saver;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
+import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.model.enums.CodeGenTypeEnum;
@@ -24,7 +25,7 @@ public abstract class CodeFileSaverTemplate<T> {
 
     // 默认构造函数，提供一个默认路径
     public CodeFileSaverTemplate() {
-        this(System.getProperty("user.dir") + "/tmp/code_output");
+        this(AppConstant.CODE_OUTPUT_ROOT_DIR);
     }
 
 

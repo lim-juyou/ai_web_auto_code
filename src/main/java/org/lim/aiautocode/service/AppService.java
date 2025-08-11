@@ -29,6 +29,10 @@ public interface AppService extends IService<App> {
      */
     @Transactional(rollbackFor = Exception.class)
     Long createApp(AppAddRequest request, Long userId);
+
+    @Transactional(rollbackFor = Exception.class)
+    String deployApp(Long appId, User loginUser);
+
     /**
      * 获取应用视图（脱敏）对象。
      *
