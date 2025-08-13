@@ -3,6 +3,7 @@ package org.lim.aiautocode.service;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import org.lim.aiautocode.model.dto.history.ChatHistoryQueryRequest;
 import org.lim.aiautocode.model.entity.ChatHistory;
 import org.lim.aiautocode.model.entity.User;
@@ -34,6 +35,8 @@ public interface ChatHistoryService extends IService<ChatHistory> {
      * @return 是否删除成功
      */
     boolean deleteByAppId(Long appId);
+
+    int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory chatMemory, int maxCount);
 
     /**
      * 根据应用ID分页查询对话历史

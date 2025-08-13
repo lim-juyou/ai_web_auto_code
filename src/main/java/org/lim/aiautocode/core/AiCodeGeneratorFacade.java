@@ -3,6 +3,7 @@ package org.lim.aiautocode.core;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.ai.AiCodeGeneratorService;
+import org.lim.aiautocode.ai.AiCodeGeneratorServiceFactory;
 import org.lim.aiautocode.ai.model.HtmlCodeResult;
 import org.lim.aiautocode.ai.model.MultiFileCodeResult;
 import org.lim.aiautocode.core.parse.CodeParserExecutor;
@@ -21,8 +22,12 @@ import java.io.File;
 @Slf4j
 @Service
 public class AiCodeGeneratorFacade {
+//    @Resource
+//    private AiCodeGeneratorService aiCodeGeneratorService;
     @Resource
-    private AiCodeGeneratorService aiCodeGeneratorService;
+    private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
+
+
 //    @Resource
 //    private AiSummarizerService aiSummarizerService;
 
@@ -40,6 +45,9 @@ public class AiCodeGeneratorFacade {
         if (codeGenType == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
         }
+            // 根据 appId 获取对应的 AI 服务实例
+        AiCodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
+
 
         // 根据不同的代码生成类型，调用相应的生成和保存逻辑
         return switch (codeGenType) {
@@ -76,6 +84,9 @@ public class AiCodeGeneratorFacade {
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
         }
+            // 根据 appId 获取对应的 AI 服务实例
+        AiCodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
+
         return switch (codeGenTypeEnum) {
             case HTML -> {
                 Flux<String> codeStream = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
