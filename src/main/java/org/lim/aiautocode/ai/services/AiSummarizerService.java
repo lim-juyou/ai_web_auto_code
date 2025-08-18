@@ -1,4 +1,4 @@
-package org.lim.aiautocode.ai;
+package org.lim.aiautocode.ai.services;
 
 import dev.langchain4j.service.SystemMessage;
 

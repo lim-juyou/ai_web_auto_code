@@ -36,6 +36,14 @@ public interface ChatHistoryService extends IService<ChatHistory> {
      */
     boolean deleteByAppId(Long appId);
 
+    /**
+     * 加载对话历史到内存
+     *
+     * @param appId 应用ID
+     * @param chatMemory 会话历史内存
+     * @param maxCount 最大数量
+     * @return 加载数量
+     */
     int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory chatMemory, int maxCount);
 
     /**

@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import org.lim.aiautocode.ai.model.HtmlCodeResult;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
-import org.lim.aiautocode.model.enums.CodeGenTypeEnum;
+import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 
 /**
  * HTML代码文件保存器

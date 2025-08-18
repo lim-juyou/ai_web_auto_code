@@ -3,7 +3,7 @@ package org.lim.aiautocode.ai;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.lim.aiautocode.ai.AiCodeGeneratorService;
+import org.lim.aiautocode.ai.services.AiCodeGeneratorService;
 import org.lim.aiautocode.ai.model.HtmlCodeResult;
 import org.lim.aiautocode.ai.model.MultiFileCodeResult;
 import org.springframework.boot.test.context.SpringBootTest;

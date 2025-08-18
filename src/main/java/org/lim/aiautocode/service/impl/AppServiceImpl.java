@@ -11,6 +11,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.core.AiCodeGeneratorFacade;
+import org.lim.aiautocode.core.handler.StreamHandlerExecutor;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.exception.ThrowUtils;
@@ -20,7 +21,7 @@ import org.lim.aiautocode.model.dto.app.AppQueryRequest;
 import org.lim.aiautocode.model.entity.App;
 import org.lim.aiautocode.model.entity.User;
 import org.lim.aiautocode.model.enums.ChatHistoryMessageTypeEnum;
-import org.lim.aiautocode.model.enums.CodeGenTypeEnum;
+import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 import org.lim.aiautocode.model.vo.app.AppVO;
 import org.lim.aiautocode.model.vo.user.UserVO;
 import org.lim.aiautocode.service.AppService;
@@ -54,6 +55,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
     @Resource
     private ChatHistoryService chatHistoryService;
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
 
     @Override
     /**
@@ -64,7 +67,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
      * @param LoginUser 当前登录用户
      * @return 生成的代码流
      */
-    public Flux<String> chatToGenCode(Long appId, String message, User LoginUser) {
+    public Flux<String> chatToGenCode(Long appId, String message, User loginUser) {
         // 1. 校验参数
         ThrowUtils.throwIf(appId == null || appId < 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
         ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
@@ -74,37 +77,22 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
 
         // 3. 验证用户是否有权限访问应用，仅创建者可以生成代码
-        ThrowUtils.throwIf(!app.getUserId().equals(LoginUser.getId()), ErrorCode.NO_AUTH_ERROR, "无权限操作");
+        ThrowUtils.throwIf(!app.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "无权限操作");
 
         // 4. 获取应用的代码生成类型
         String codeGenType = app.getCodeGenType();
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
         ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.PARAMS_ERROR, "代码生成类型错误");
 
-        //5.通过校验后，添加用户消息到历史对话
-        chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), LoginUser.getId());
+        // 5. 通过校验后，添加用户消息到对话历史
+        chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
+        // 6. 调用 AI 生成代码（流式）
+        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+        // 7. 收集 AI 响应内容并在完成后记录到对话历史
+        return streamHandlerExecutor.doExecute(codeStream, chatHistoryService, appId, loginUser, codeGenTypeEnum);
 
-        //6.调用AiCodeGeneratorFacade生成代码
-        Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
-
-        //7.收集AI响应内容并在完成后记录到对话历史
-        StringBuilder aiResponseBuilder = new StringBuilder();
-        return contentFlux
-                .map(content -> {
-                    aiResponseBuilder.append(content);
-                    return content;
-                })
-                .doOnComplete(()->{
-                    String aiResponse = aiResponseBuilder.toString();
-                    if(StrUtil.isNotBlank(aiResponse)){
-                        chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), LoginUser.getId());
-                    }
-                })
-                .doOnError(error->{
-                    String errorMessage = "AI回复失败" + error.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), LoginUser.getId());
-                });
     }
+
     /**
      * 删除应用时关联删除对话历史
      *
@@ -152,7 +140,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         BeanUtil.copyProperties(request, app);
         app.setUserId(userId);
         app.setAppName(StrUtil.sub(initPrompt, 0, 12));
-        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
+
+//        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
+// 暂时设置为 VUE 工程生成
+        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
 
         // 保存
         boolean saved = this.save(app);
@@ -163,7 +154,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     /**
      * 部署应用
-     * @param appId 应用 ID
+     *
+     * @param appId     应用 ID
      * @param loginUser 登录用户
      * @return 部署成功后的访问路径
      */
@@ -226,24 +218,26 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 9. 返回可访问的 URL
         return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
     }
+
     /**
      * 生成 deployKey 最大尝试次数为5
+     *
      * @return deployKey
      */
     private String generateUniqueDeployKey() {
-       int maxRetries  = AppConstant.DEPLOY_KEY_MAX_RETRIES;
-       for (int i = 0; i < maxRetries; i++) {
-           try {
-               String deployKey = RandomUtil.randomString(6);
-               // 先检查数据库中是否存在
-               QueryWrapper wrapper = QueryWrapper.create().eq(App::getDeployKey, deployKey);
-               if (this.count(wrapper) == 0) {
-                   return deployKey;
-               }
-           } catch (Exception e) {
-               log.warn("检查 deployKey 唯一性时出错: {}", e.getMessage());
-           }
-       }
+        int maxRetries = AppConstant.DEPLOY_KEY_MAX_RETRIES;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                String deployKey = RandomUtil.randomString(6);
+                // 先检查数据库中是否存在
+                QueryWrapper wrapper = QueryWrapper.create().eq(App::getDeployKey, deployKey);
+                if (this.count(wrapper) == 0) {
+                    return deployKey;
+                }
+            } catch (Exception e) {
+                log.warn("检查 deployKey 唯一性时出错: {}", e.getMessage());
+            }
+        }
         throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成部署密钥失败，请重试");
     }
 
@@ -270,6 +264,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }
         return appVO;
     }
+
     /**
      * 获取应用视图（脱敏）对象列表。
      *
@@ -298,6 +293,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     /**
      * 构建查询请求参数
+     *
      * @param appQueryRequest 应用查询条件对象
      * @return 查询条件对象
      */

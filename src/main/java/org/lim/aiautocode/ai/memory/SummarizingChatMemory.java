@@ -3,14 +3,16 @@ package org.lim.aiautocode.ai.memory;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
-import org.lim.aiautocode.ai.AiSummarizerService;
+import org.lim.aiautocode.ai.services.AiSummarizerService;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
+@Builder
 public class SummarizingChatMemory implements ChatMemory {
 
     private final MessageWindowChatMemory delegate;

@@ -5,7 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
-import org.lim.aiautocode.model.enums.CodeGenTypeEnum;
+import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;

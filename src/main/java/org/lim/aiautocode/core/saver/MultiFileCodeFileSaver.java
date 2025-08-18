@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import org.lim.aiautocode.ai.model.MultiFileCodeResult;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
-import org.lim.aiautocode.model.enums.CodeGenTypeEnum;
+import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 
 /**
  * 多文件代码保存器
