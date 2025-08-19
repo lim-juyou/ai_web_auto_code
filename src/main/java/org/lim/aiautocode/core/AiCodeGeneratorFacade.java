@@ -150,6 +150,11 @@ public class AiCodeGeneratorFacade {
                         AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
                         sink.next(JSONUtil.toJsonStr(aiResponseMessage));
                     })
+                    // todo langChain4j v1.2支持思考流的处理
+                /*    .onPartialThinkToolExecutionRequest((index, toolExecutionRequest) -> {
+                        ToolThinkRequestMessage toolThinkRequestMessage = new ToolThinkRequestMessage(toolExecutionRequest);
+                        sink.next(JSONUtil.toJsonStr(toolThinkRequestMessage));
+                    })*/
                     .onPartialToolExecutionRequest((index, toolExecutionRequest) -> {
                         ToolRequestMessage toolRequestMessage = new ToolRequestMessage(toolExecutionRequest);
                         sink.next(JSONUtil.toJsonStr(toolRequestMessage));

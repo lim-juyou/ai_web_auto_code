@@ -11,6 +11,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.core.AiCodeGeneratorFacade;
+import org.lim.aiautocode.core.builder.VueProjectBuilder;
 import org.lim.aiautocode.core.handler.StreamHandlerExecutor;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
@@ -57,6 +58,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private ChatHistoryService chatHistoryService;
     @Resource
     private StreamHandlerExecutor streamHandlerExecutor;
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     @Override
     /**
@@ -198,10 +201,24 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         String codeGenType = app.getCodeGenType();
         String sourceDirName = codeGenType + "_" + appId;
         String sourceDirPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + sourceDirName;
-        // 检查源目录是否存在
+        //7. 检查源目录是否存在
         File sourceDir = new File(sourceDirPath);
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "应用代码不存在，请先生成代码");
+        }
+        // Vue项目特殊处理：执行构建
+        CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
+        if(codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT){
+            // Vue项目需要构建
+            boolean buildResult = vueProjectBuilder.buildProject(sourceDirPath);
+            ThrowUtils.throwIf(!buildResult, ErrorCode.SYSTEM_ERROR, "Vue项目构建失败");
+
+            // 检查dist目录是否存在
+            File distDir = new File(sourceDir, "dist");
+            ThrowUtils.throwIf(!distDir.exists() || !distDir.isDirectory(), ErrorCode.SYSTEM_ERROR, "Vue项目构建失败，请检查代码生成配置");
+            // 将dist目录复制到部署目录
+            sourceDir = distDir;
+            log.info("Vue项目构建成功，dist目录: {}", distDir.getAbsolutePath());
         }
         // 复制文件到部署目录
         String deployDirPath = AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
