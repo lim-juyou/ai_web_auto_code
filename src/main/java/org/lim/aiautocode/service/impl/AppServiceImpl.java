@@ -9,6 +9,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.core.AiCodeGeneratorFacade;
 import org.lim.aiautocode.core.builder.VueProjectBuilder;
@@ -22,11 +23,11 @@ import org.lim.aiautocode.model.dto.app.AppQueryRequest;
 import org.lim.aiautocode.model.entity.App;
 import org.lim.aiautocode.model.entity.User;
 import org.lim.aiautocode.model.enums.ChatHistoryMessageTypeEnum;
-import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 import org.lim.aiautocode.model.vo.app.AppVO;
 import org.lim.aiautocode.model.vo.user.UserVO;
 import org.lim.aiautocode.service.AppService;
 import org.lim.aiautocode.service.ChatHistoryService;
+import org.lim.aiautocode.service.ScreenshotService;
 import org.lim.aiautocode.service.UserService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -60,16 +61,19 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private StreamHandlerExecutor streamHandlerExecutor;
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+    @Resource
+    private ScreenshotService screenshotService;
 
-    @Override
+
     /**
      * 用户与应用对话生成代码
      *
      * @param appId     应用ID
      * @param message   用户输入的消息
-     * @param LoginUser 当前登录用户
+     * @param loginUser 当前登录用户
      * @return 生成的代码流
      */
+    @Override
     public Flux<String> chatToGenCode(Long appId, String message, User loginUser) {
         // 1. 校验参数
         ThrowUtils.throwIf(appId == null || appId < 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
@@ -232,8 +236,34 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "部署失败：" + e.getMessage());
         }
-        // 9. 返回可访问的 URL
-        return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        // 9. 构建应用访问 URL
+        String appDeployUrl = String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        // 10.异步生成截图并更新应用封面
+        generateAppScreenshotAsync(appId, appDeployUrl);
+        return appDeployUrl;
+    }
+
+    /**
+     * 异步生成应用截图并更新应用封面
+     * @param appId 应用 ID
+     * @param appDeployUrl 应用部署 URL
+     */
+    public void generateAppScreenshotAsync(Long appId, String appDeployUrl) {
+        Thread.startVirtualThread(()->{
+            // 调用截图服务生成截图并上传
+            String screenshotUrl = screenshotService.generateAndUploadScreenshot(appDeployUrl);
+            if(StrUtil.isNotBlank(screenshotUrl)){
+                // 更新应用封面
+                App updateApp = new App();
+                updateApp.setId(appId);
+                updateApp.setCover(screenshotUrl);
+                boolean updateResult = this.updateById(updateApp);
+                if(!updateResult){
+                    log.warn("更新应用封面失败，appId: {}, cover: {}", appId, screenshotUrl);
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR, "更新应用封面失败");
+                }
+            }
+        });
     }
 
     /**

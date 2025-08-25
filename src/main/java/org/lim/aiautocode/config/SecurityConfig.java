@@ -33,6 +33,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/user/login",
                                 "/user/register",
+                                "/user/get/login",
+                                // 首页公开数据接口放行
+                                "/app/good/list/page/vo",
+                                "/app/get/vo",
                                 "/doc.html",
                                 "/webjars/**",
                                 "/swagger-resources/**",
