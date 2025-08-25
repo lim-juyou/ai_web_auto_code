@@ -20,6 +20,7 @@ import java.util.List;
 public interface AppService extends IService<App> {
     Flux<String> chatToGenCode(Long appId, String message, User LoginUser);
 
+
     /**
      * 创建应用。
      *

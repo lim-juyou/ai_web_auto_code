@@ -10,6 +10,7 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
+import org.lim.aiautocode.ai.services.AiCodeGenTypeRoutingService;
 import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.core.AiCodeGeneratorFacade;
 import org.lim.aiautocode.core.builder.VueProjectBuilder;
@@ -63,6 +64,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private VueProjectBuilder vueProjectBuilder;
     @Resource
     private ScreenshotService screenshotService;
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
 
 
     /**
@@ -99,6 +102,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         return streamHandlerExecutor.doExecute(codeStream, chatHistoryService, appId, loginUser, codeGenTypeEnum);
 
     }
+
+
+
+
 
     /**
      * 删除应用时关联删除对话历史
@@ -148,16 +155,17 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         app.setUserId(userId);
         app.setAppName(StrUtil.sub(initPrompt, 0, 12));
 
-//        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
-// 暂时设置为 VUE 工程生成
-        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
+    //使用AI智能选择代码生成类型
+        CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        app.setCodeGenType(selectedCodeGenType.getValue());
 
         // 保存
         boolean saved = this.save(app);
         ThrowUtils.throwIf(!saved, ErrorCode.OPERATION_ERROR);
-
+        log.info("应用创建成功: ID: {}, 类型：{}", app.getId(), selectedCodeGenType.getValue());
         return app.getId();
     }
+
 
     /**
      * 部署应用
@@ -212,7 +220,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }
         // Vue项目特殊处理：执行构建
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
-        if(codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT){
+        if (codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT) {
             // Vue项目需要构建
             boolean buildResult = vueProjectBuilder.buildProject(sourceDirPath);
             ThrowUtils.throwIf(!buildResult, ErrorCode.SYSTEM_ERROR, "Vue项目构建失败");
@@ -245,20 +253,21 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     /**
      * 异步生成应用截图并更新应用封面
-     * @param appId 应用 ID
+     *
+     * @param appId        应用 ID
      * @param appDeployUrl 应用部署 URL
      */
     public void generateAppScreenshotAsync(Long appId, String appDeployUrl) {
-        Thread.startVirtualThread(()->{
+        Thread.startVirtualThread(() -> {
             // 调用截图服务生成截图并上传
             String screenshotUrl = screenshotService.generateAndUploadScreenshot(appDeployUrl);
-            if(StrUtil.isNotBlank(screenshotUrl)){
+            if (StrUtil.isNotBlank(screenshotUrl)) {
                 // 更新应用封面
                 App updateApp = new App();
                 updateApp.setId(appId);
                 updateApp.setCover(screenshotUrl);
                 boolean updateResult = this.updateById(updateApp);
-                if(!updateResult){
+                if (!updateResult) {
                     log.warn("更新应用封面失败，appId: {}, cover: {}", appId, screenshotUrl);
                     throw new BusinessException(ErrorCode.OPERATION_ERROR, "更新应用封面失败");
                 }
