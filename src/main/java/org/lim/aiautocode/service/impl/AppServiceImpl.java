@@ -72,7 +72,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
      * 用户与应用对话生成代码
      *
      * @param appId     应用ID
-     * @param message   用户输入的消息
+     * @param message   用户输入的消息 (可能包含图片URL)
      * @param loginUser 当前登录用户
      * @return 生成的代码流
      */

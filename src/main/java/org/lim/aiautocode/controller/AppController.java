@@ -17,6 +17,7 @@ import org.lim.aiautocode.constant.UserConstant;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.exception.ThrowUtils;
+import org.lim.aiautocode.manager.OssManager;
 import org.lim.aiautocode.model.dto.app.*;
 import org.lim.aiautocode.model.entity.App;
 import org.lim.aiautocode.model.entity.User;
@@ -27,6 +28,7 @@ import org.lim.aiautocode.service.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -34,6 +36,7 @@ import java.io.File;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 应用 控制层。
@@ -50,6 +53,8 @@ public class AppController {
     private UserService userService;
     @Resource
     private ProjectDownloadService projectDownloadService;
+    @Resource
+    private OssManager ossManager;
     /**
      * 应用聊天生成代码（流式 SSE）
      *
@@ -59,12 +64,19 @@ public class AppController {
      */
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
-                                                       @RequestParam String message) {
+                                                       @RequestParam String message,
+                                                       @RequestParam(required = false) String imageUrl) {
         // 参数校验
         ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID无效");
-        ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
+        ThrowUtils.throwIf(StrUtil.isBlank(message)&&StrUtil.isBlank(imageUrl), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
         // 获取当前登录用户
         User loginUser = userService.getLoginUser();
+        //拼接完整的prompt
+        String finalMessage = message;
+        if(StrUtil.isNotBlank(imageUrl)){
+            // 将图片URL和用户消息拼接，形成一个包含图片信息的完整提示词
+            finalMessage = String.format("用户上传了一张图片，URL为：%s。根据这张图片和我接下来的要求，请修改网站。我的要求是：%s", imageUrl, message);
+        }
         // 调用服务生成代码（流式）
         Flux<String> contentFlux = appService.chatToGenCode(appId, message, loginUser);
         // 转换为 ServerSentEvent 格式
@@ -151,6 +163,44 @@ public class AppController {
         String downloadFileName = String.valueOf(appId);
         // 7. 调用通用下载服务
         projectDownloadService.downloadProjectAsZip(sourceDirPath, downloadFileName, response);
+    }
+
+    /**
+     * 上传图片，返回图片URL
+     *
+     * @param file 上传的图片文件
+     * @return 图片URL
+     */
+    @PostMapping("/upload/image")
+    public BaseResponse<String> uploadImage(@RequestParam("file") MultipartFile file) {
+        ThrowUtils.throwIf(file.isEmpty(), ErrorCode.PARAMS_ERROR, "上传文件为空");
+        try {
+            // 生成唯一的文件名，保持原始文件名后缀
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = "";
+            if (StrUtil.isNotBlank(originalFilename) && originalFilename.contains(".")) {
+                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String fileName = UUID.randomUUID() + fileExtension;
+
+            // 创建临时文件
+            File tempFile = File.createTempFile("upload-", fileName);
+            file.transferTo(tempFile);
+
+            // 上传到OSS，使用固定前缀方便管理
+            String ossKey = "images/" + fileName;
+            String imageUrl = ossManager.uploadFile(ossKey, tempFile);
+
+            // 删除临时文件
+            tempFile.delete();
+
+            ThrowUtils.throwIf(StrUtil.isBlank(imageUrl), ErrorCode.OPERATION_ERROR, "图片上传失败");
+
+            return ResultUtils.success(imageUrl);
+
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "图片上传处理失败：" + e.getMessage());
+        }
     }
 
 
