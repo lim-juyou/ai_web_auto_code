@@ -48,6 +48,8 @@ public class AppController {
     private AppService appService;
     @Resource
     private UserService userService;
+    @Resource
+    private ProjectDownloadService projectDownloadService;
     /**
      * 应用聊天生成代码（流式 SSE）
      *
@@ -114,8 +116,7 @@ public class AppController {
         String deployUrl = appService.deployApp(appId, loginUser);
         return ResultUtils.success(deployUrl);
     }
-    @Resource
-    private ProjectDownloadService projectDownloadService;
+
 
     /**
      * 下载应用代码

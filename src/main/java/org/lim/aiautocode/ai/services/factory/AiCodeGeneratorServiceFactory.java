@@ -1,4 +1,4 @@
-package org.lim.aiautocode.ai.services;
+package org.lim.aiautocode.ai.services.factory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -12,7 +12,9 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 import org.lim.aiautocode.ai.memory.SummarizingChatMemory;
-import org.lim.aiautocode.ai.tools.FileWriteTool;
+import org.lim.aiautocode.ai.services.AiCodeGeneratorService;
+import org.lim.aiautocode.ai.services.AiSummarizerService;
+import org.lim.aiautocode.ai.tools.ToolManager;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.service.ChatHistoryService;
@@ -37,6 +39,8 @@ public class AiCodeGeneratorServiceFactory {
     private ChatHistoryService chatHistoryService;
     @Resource
     private AiSummarizerService aiSummarizerService;
+    @Resource
+    private ToolManager toolManager;
 
     /**
      * AiCodeGeneratorService缓存
@@ -96,7 +100,7 @@ public class AiCodeGeneratorServiceFactory {
             case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
                     .streamingChatModel(reasoningStreamingChatModel)
                     .chatMemoryProvider(memoryId -> summarizingChatMemory)
-                    .tools(new FileWriteTool())
+                    .tools(toolManager.getAllTools())
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                     ))

@@ -13,7 +13,7 @@ import org.lim.aiautocode.ai.model.message.AiResponseMessage;
 import org.lim.aiautocode.ai.model.message.ToolExecutedMessage;
 import org.lim.aiautocode.ai.model.message.ToolRequestMessage;
 import org.lim.aiautocode.ai.services.AiCodeGeneratorService;
-import org.lim.aiautocode.ai.services.AiCodeGeneratorServiceFactory;
+import org.lim.aiautocode.ai.services.factory.AiCodeGeneratorServiceFactory;
 import org.lim.aiautocode.core.parse.CodeParserExecutor;
 import org.lim.aiautocode.core.saver.CodeFileSaverExecutor;
 import org.lim.aiautocode.exception.BusinessException;
