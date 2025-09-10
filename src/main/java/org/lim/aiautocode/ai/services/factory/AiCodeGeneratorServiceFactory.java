@@ -17,6 +17,7 @@ import org.lim.aiautocode.ai.services.AiSummarizerService;
 import org.lim.aiautocode.ai.tools.ToolManager;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
+import org.lim.aiautocode.langgraph4j.node.SpringContextUtil;
 import org.lim.aiautocode.service.ChatHistoryService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,12 +28,8 @@ import java.time.Duration;
 @Slf4j
 public class AiCodeGeneratorServiceFactory {
 
-    @Resource
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
-    @Resource
-    private StreamingChatModel openAiStreamingChatModel;
-    @Resource
-    private StreamingChatModel reasoningStreamingChatModel;
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
     @Resource
@@ -96,24 +93,33 @@ public class AiCodeGeneratorServiceFactory {
                 .maxMessagesBeforeSummarization(chatMemoryMaxNonSystemMessages)
                 .messagesToSummarize(messagesToSummarizeCount)
                 .build();
-        return switch (codeGenType){
-            case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
-                    .streamingChatModel(reasoningStreamingChatModel)
-                    .chatMemoryProvider(memoryId -> summarizingChatMemory)
-                    .tools(toolManager.getAllTools())
-                    .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
-                            toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
-                    ))
-                    .build();
-            // HTML 和多文件生成使用默认模型
-            case HTML, MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(openAiStreamingChatModel)
-                    .chatMemory(summarizingChatMemory)
-                    .build();
+        // 根据代码生成类型选择不同的模型配置
+        return switch (codeGenType) {
+            case VUE_PROJECT -> {
+                // 使用多例模式的 StreamingChatModel 解决并发问题
+                StreamingChatModel reasoningStreamingChatModel = SpringContextUtil.getBean("reasoningStreamingChatModelPrototype", StreamingChatModel.class);
+                yield AiServices.builder(AiCodeGeneratorService.class)
+                        .streamingChatModel(reasoningStreamingChatModel)
+                        .chatMemoryProvider(memoryId -> summarizingChatMemory)
+                        .tools(toolManager.getAllTools())
+                        .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
+                                toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
+                        ))
+                        .build();
+            }
+            case HTML, MULTI_FILE -> {
+                // 使用多例模式的 StreamingChatModel 解决并发问题
+                StreamingChatModel openAiStreamingChatModel = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
+                yield AiServices.builder(AiCodeGeneratorService.class)
+                        .chatModel(chatModel)
+                        .streamingChatModel(openAiStreamingChatModel)
+                        .chatMemory(summarizingChatMemory)
+                        .build();
+            }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,
                     "不支持的代码生成类型: " + codeGenType.getValue());
         };
+
 
     }
     private String buildCacheKey(Long appId,CodeGenTypeEnum codeGenType){

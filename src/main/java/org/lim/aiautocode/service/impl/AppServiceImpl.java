@@ -11,6 +11,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
 import org.lim.aiautocode.ai.services.AiCodeGenTypeRoutingService;
+import org.lim.aiautocode.ai.services.factory.AiCodeGenTypeRoutingServiceFactory;
 import org.lim.aiautocode.constant.AppConstant;
 import org.lim.aiautocode.core.AiCodeGeneratorFacade;
 import org.lim.aiautocode.core.builder.VueProjectBuilder;
@@ -62,7 +63,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Resource
     private ScreenshotService screenshotService;
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
+
 
 
     /**
@@ -153,6 +155,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         app.setAppName(StrUtil.sub(initPrompt, 0, 12));
 
     //使用AI智能选择代码生成类型
+        AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
         CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
         app.setCodeGenType(selectedCodeGenType.getValue());
 

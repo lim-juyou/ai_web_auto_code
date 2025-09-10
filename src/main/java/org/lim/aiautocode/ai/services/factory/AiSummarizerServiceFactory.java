@@ -10,8 +10,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AiSummarizerServiceFactory {
 
-    @Resource
+    @Resource(name="routingChatModelPrototype")
     private ChatModel chatModel;
+
 
     /**
      * Ai总结服务Bean
