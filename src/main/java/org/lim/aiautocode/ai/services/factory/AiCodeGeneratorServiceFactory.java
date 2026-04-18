@@ -11,6 +11,8 @@ import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.lim.aiautocode.ai.enums.CodeGenTypeEnum;
+import org.lim.aiautocode.ai.guardrail.PromptSafetyInputGuardrail;
+import org.lim.aiautocode.ai.guardrail.RetryOutputGuardrail;
 import org.lim.aiautocode.ai.memory.SummarizingChatMemory;
 import org.lim.aiautocode.ai.services.AiCodeGeneratorService;
 import org.lim.aiautocode.ai.services.AiSummarizerService;
@@ -105,6 +107,8 @@ public class AiCodeGeneratorServiceFactory {
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))
+                        .inputGuardrails(new PromptSafetyInputGuardrail())//输入护轨
+                        .outputGuardrails(new RetryOutputGuardrail())//输出护轨
                         .build();
             }
             case HTML, MULTI_FILE -> {
@@ -114,6 +118,8 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(openAiStreamingChatModel)
                         .chatMemory(summarizingChatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+                        .outputGuardrails(new RetryOutputGuardrail())
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,

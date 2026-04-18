@@ -13,16 +13,18 @@ import org.lim.aiautocode.constant.UserConstant;
 import org.lim.aiautocode.exception.BusinessException;
 import org.lim.aiautocode.exception.ErrorCode;
 import org.lim.aiautocode.exception.ThrowUtils;
+import org.lim.aiautocode.manager.OssManager;
 import org.lim.aiautocode.model.dto.user.*;
-import org.lim.aiautocode.model.entity.App;
 import org.lim.aiautocode.model.entity.User;
-import org.lim.aiautocode.model.vo.app.AppVO;
 import org.lim.aiautocode.model.vo.user.LoginUserVO;
 import org.lim.aiautocode.model.vo.user.UserVO;
 import org.lim.aiautocode.service.UserService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.List;
+import java.util.UUID;
 
 import static org.lim.aiautocode.constant.UserConstant.ADMIN_ROLE;
 
@@ -41,8 +43,10 @@ public class UserController {
 
 
     @Resource
-
     private UserService userService;
+
+    @Resource
+    private OssManager ossManager;
 
 
 
@@ -167,7 +171,7 @@ public class UserController {
      * 更新用户
      */
     @PostMapping("/update")
-    @AuthCheck(requiredRoles = UserConstant.ADMIN_ROLE)
+   // @AuthCheck(requiredRoles = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
         if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -177,6 +181,44 @@ public class UserController {
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
+    }
+
+    /**
+     * 上传用户头像，上传到阿里云OSS
+     */
+    @PostMapping("/upload/avatar")
+    public BaseResponse<String> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        ThrowUtils.throwIf(file.isEmpty(), ErrorCode.PARAMS_ERROR, "上传文件为空");
+        // 校验文件类型
+        String originalFilename = file.getOriginalFilename();
+        String fileExtension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+        ThrowUtils.throwIf(!fileExtension.matches("\\.(jpg|jpeg|png|gif|webp)"),
+                ErrorCode.PARAMS_ERROR, "仅支持 jpg/jpeg/png/gif/webp 格式");
+        // 校验文件大小（限制 2MB）
+        ThrowUtils.throwIf(file.getSize() > 2 * 1024 * 1024, ErrorCode.PARAMS_ERROR, "文件大小不能超过 2MB");
+        try {
+            String fileName = UUID.randomUUID() + fileExtension;
+            File tempFile = File.createTempFile("avatar-", fileName);
+            file.transferTo(tempFile);
+            String ossKey = "avatars/" + fileName;
+            String avatarUrl = ossManager.uploadFile(ossKey, tempFile);
+            tempFile.delete();
+            ThrowUtils.throwIf(avatarUrl == null || avatarUrl.isBlank(), ErrorCode.OPERATION_ERROR, "头像上传失败");
+            // 更新当前登录用户的头像
+            User loginUser = userService.getLoginUser();
+            User updateUser = new User();
+            updateUser.setId(loginUser.getId());
+            updateUser.setUserAvatar(avatarUrl);
+            userService.updateById(updateUser);
+            return ResultUtils.success(avatarUrl);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "头像上传处理失败：" + e.getMessage());
+        }
     }
 
     /**
